@@ -1,0 +1,111 @@
+/* Root */
+.root {
+    -fx-font-family: "Segoe UI", "San Francisco", Arial;
+    -fx-background-color: #f7f8fa;
+}
+
+/* Sidebar */
+.sidebar {
+    -fx-background-color: #2b2f36;
+}
+
+/* Sidebar buttons */
+.sidebar-button {
+    -fx-background-color: #eeeeee;
+    -fx-text-fill: #222;
+    -fx-font-size: 14px;
+    -fx-background-radius: 12;
+    -fx-padding: 10 14;
+}
+
+.sidebar-button:hover {
+    -fx-background-color: #dfe6e9;
+}
+
+/* Page titles */
+.page-title {
+    -fx-font-size: 24px;
+    -fx-font-weight: bold;
+}
+
+/* Table */
+.table-view {
+    -fx-background-radius: 10;
+}
+
+/* Primary buttons */
+.primary-btn {
+    -fx-background-color: #4f6d7a;
+    -fx-text-fill: white;
+    -fx-background-radius: 10;
+    -fx-padding: 10 18;
+}
+
+.primary-btn:hover {
+    -fx-background-color: #3e5963;
+}
+
+/* Danger buttons */
+.danger-btn {
+    -fx-background-color: #c0392b;
+    -fx-text-fill: white;
+    -fx-background-radius: 10;
+}
+
+/* Dialogs */
+.dialog-pane {
+    -fx-background-color: #ffffff;
+    -fx-border-radius: 12;
+    -fx-background-radius: 12;
+}
+
+.page-title {
+    -fx-font-size: 26px;
+    -fx-font-weight: bold;
+}
+
+.page-subtitle {
+    -fx-text-fill: #666;
+}
+
+.insight-text {
+    -fx-font-size: 14px;
+}
+
+.primary-btn {
+    -fx-background-color: #546E7A;
+    -fx-text-fill: white;
+    -fx-background-radius: 10;
+}
+
+.danger-btn {
+    -fx-background-color: #E57373;
+    -fx-text-fill: white;
+}
+
+.dialog-pane > .header-panel {
+    visibility: hidden;
+}
+
+/* Charts */
+.chart-series-line {
+    -fx-stroke: #546E7A;
+}
+
+.default-color0.chart-pie {
+    -fx-pie-color: #78909C;
+}
+.default-color1.chart-pie {
+    -fx-pie-color: #A1887F;
+}
+.default-color2.chart-pie {
+    -fx-pie-color: #90A4AE;
+}
+
+/* Dialog cleanup */
+.dialog-pane > .graphic {
+    visibility: hidden;
+}
+.dialog-pane {
+    -fx-padding: 20;
+}
