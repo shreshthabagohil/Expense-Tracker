@@ -3,23 +3,22 @@ package com.shreshtha.expensetracker.model;
 public class BudgetRow {
 
     private final String category;
-    private final double originalBudget;  // first value set
-    private final double currentBudget;   // latest value (edited or not)
+    private final double originalBudget;
+    private final double currentBudget;
+    private final boolean edited;
     private final double spent;
-    private final boolean edited;         // whether user edited once
 
-    public BudgetRow(
-            String category,
-            double originalBudget,
-            double currentBudget,
-            double spent,
-            boolean edited
-    ) {
+    public BudgetRow(String category,
+                     double originalBudget,
+                     double currentBudget,
+                     boolean edited,
+                     double spent) {
+
         this.category = category;
         this.originalBudget = originalBudget;
         this.currentBudget = currentBudget;
-        this.spent = spent;
         this.edited = edited;
+        this.spent = spent;
     }
 
     public String getCategory() {
@@ -34,6 +33,10 @@ public class BudgetRow {
         return currentBudget;
     }
 
+    public boolean isEdited() {
+        return edited;
+    }
+
     public double getSpent() {
         return spent;
     }
@@ -42,11 +45,13 @@ public class BudgetRow {
         return currentBudget - spent;
     }
 
-    public boolean isEdited() {
-        return edited;
-    }
-
     public String getStatus() {
         return edited ? "Edited" : "Set";
     }
+
+    public double getProgress() {
+    if (currentBudget == 0) return 0;
+    return spent / currentBudget;
+}
+
 }
