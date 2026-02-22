@@ -4,11 +4,13 @@ import com.shreshtha.expensetracker.controller.BudgetService;
 import com.shreshtha.expensetracker.model.BudgetRow;
 import com.shreshtha.expensetracker.model.Expense;
 
+import javafx.beans.property.SimpleDoubleProperty;
+import javafx.beans.property.SimpleStringProperty;
 import javafx.collections.FXCollections;
 import javafx.geometry.Insets;
+import javafx.geometry.Pos;
 import javafx.scene.control.*;
-import javafx.scene.layout.BorderPane;
-import javafx.scene.layout.VBox;
+import javafx.scene.layout.*;
 
 import java.util.List;
 
@@ -18,8 +20,8 @@ public class BudgetView extends BorderPane {
     private final List<Expense> expenses;
 
     private final TableView<BudgetRow> table = new TableView<>();
+    private final VBox topContainer = new VBox(20);
 
-    // Set Budget UI components
     private final ComboBox<String> categoryBox = new ComboBox<>();
     private final TextField amountField = new TextField();
 
@@ -34,22 +36,23 @@ public class BudgetView extends BorderPane {
 
         setPadding(new Insets(20));
 
-        Label title = new Label("Monthly Budget Overview");
-        title.getStyleClass().add("page-title");
+        // ============================
+        // TITLE
+        // ============================
 
-        // =====================================
+        Label title = new Label("Monthly Budget Overview");
+        title.setStyle("-fx-font-size: 18px; -fx-font-weight: bold;");
+
+        // ============================
         // SET BUDGET SECTION
-        // =====================================
+        // ============================
 
         categoryBox.getItems().addAll(
-                "Food",
-                "Transport",
-                "Shopping",
-                "Bills",
-                "Entertainment"
+                "Food", "Transport", "Shopping",
+                "Bills", "Entertainment"
         );
-
         categoryBox.setPromptText("Select Category");
+
         amountField.setPromptText("Enter Budget Amount");
 
         Button setBtn = new Button("Set Budget");
@@ -59,148 +62,122 @@ public class BudgetView extends BorderPane {
             String category = categoryBox.getValue();
 
             if (category == null || amountField.getText().isEmpty()) {
-                new Alert(Alert.AlertType.WARNING,
-                        "Please fill all fields").show();
+                showAlert("Please fill all fields");
                 return;
             }
 
             try {
-
-                double amount =
-                        Double.parseDouble(amountField.getText());
-
+                double amount = Double.parseDouble(amountField.getText());
                 budgetService.setBudgetOnce(category, amount);
-
-                refresh();
-
                 amountField.clear();
                 categoryBox.setValue(null);
+                refresh();
+                showAlert("Budget saved successfully");
 
             } catch (Exception ex) {
-                new Alert(Alert.AlertType.ERROR,
-                        ex.getMessage()).show();
+                showAlert(ex.getMessage());
             }
         });
 
-        VBox setSection = new VBox(10,
-                new Label("Set Monthly Budget"),
+        HBox setSection = new HBox(15,
                 categoryBox,
                 amountField,
                 setBtn
         );
 
-        // =====================================
+        setSection.setAlignment(Pos.CENTER_LEFT);
+
+        // ============================
         // TABLE SECTION
-        // =====================================
+        // ============================
 
         table.setColumnResizePolicy(TableView.CONSTRAINED_RESIZE_POLICY);
 
-        // Category
         TableColumn<BudgetRow, String> categoryCol =
                 new TableColumn<>("Category");
         categoryCol.setCellValueFactory(data ->
-                new javafx.beans.property.SimpleStringProperty(
-                        data.getValue().getCategory()
-                )
+                new SimpleStringProperty(data.getValue().getCategory())
         );
 
-        // Original
         TableColumn<BudgetRow, Number> originalCol =
                 new TableColumn<>("Original");
         originalCol.setCellValueFactory(data ->
-                new javafx.beans.property.SimpleDoubleProperty(
-                        data.getValue().getOriginalBudget()
-                )
+                new SimpleDoubleProperty(data.getValue().getOriginalBudget())
         );
 
-        // Current
         TableColumn<BudgetRow, Number> currentCol =
                 new TableColumn<>("Current");
         currentCol.setCellValueFactory(data ->
-                new javafx.beans.property.SimpleDoubleProperty(
-                        data.getValue().getCurrentBudget()
-                )
+                new SimpleDoubleProperty(data.getValue().getCurrentBudget())
         );
 
-        // Spent
         TableColumn<BudgetRow, Number> spentCol =
                 new TableColumn<>("Spent");
         spentCol.setCellValueFactory(data ->
-                new javafx.beans.property.SimpleDoubleProperty(
-                        data.getValue().getSpent()
-                )
+                new SimpleDoubleProperty(data.getValue().getSpent())
         );
 
-        // Remaining
         TableColumn<BudgetRow, Number> remainingCol =
                 new TableColumn<>("Remaining");
         remainingCol.setCellValueFactory(data ->
-                new javafx.beans.property.SimpleDoubleProperty(
-                        data.getValue().getRemaining()
-                )
+                new SimpleDoubleProperty(data.getValue().getRemaining())
         );
 
         // Progress Column
-TableColumn<BudgetRow, Double> progressCol = new TableColumn<>("Usage");
+        TableColumn<BudgetRow, Double> progressCol =
+                new TableColumn<>("Usage");
 
-progressCol.setCellValueFactory(data ->
-        new javafx.beans.property.SimpleDoubleProperty(
-                data.getValue().getProgress()
-        ).asObject()
-);
+        progressCol.setCellValueFactory(data ->
+                new SimpleDoubleProperty(
+                        data.getValue().getProgress()
+                ).asObject()
+        );
 
-progressCol.setCellFactory(col -> new TableCell<>() {
+        progressCol.setCellFactory(col -> new TableCell<>() {
 
-    private final ProgressBar bar = new ProgressBar();
+            private final ProgressBar bar = new ProgressBar();
 
-    @Override
-    protected void updateItem(Double value, boolean empty) {
-        super.updateItem(value, empty);
+            @Override
+            protected void updateItem(Double value, boolean empty) {
+                super.updateItem(value, empty);
 
-        if (empty || value == null) {
-            setGraphic(null);
-        } else {
-            bar.setProgress(value);
+                if (empty || value == null) {
+                    setGraphic(null);
+                } else {
+                    bar.setProgress(value);
 
-            if (value >= 1.0) {
-                bar.setStyle("-fx-accent: #E57373;"); // red
-            } else if (value >= 0.8) {
-                bar.setStyle("-fx-accent: #FFD54F;"); // yellow
-            } else {
-                bar.setStyle("-fx-accent: #81C784;"); // green
+                    if (value >= 1.0) {
+                        bar.setStyle("-fx-accent: #E57373;");
+                    } else if (value >= 0.8) {
+                        bar.setStyle("-fx-accent: #FFD54F;");
+                    } else {
+                        bar.setStyle("-fx-accent: #81C784;");
+                    }
+
+                    setGraphic(bar);
+                }
             }
+        });
 
-            setGraphic(bar);
-        }
-    }
-});
-
-
-        // Status
         TableColumn<BudgetRow, String> statusCol =
                 new TableColumn<>("Status");
         statusCol.setCellValueFactory(data ->
-                new javafx.beans.property.SimpleStringProperty(
-                        data.getValue().getStatus()
-                )
+                new SimpleStringProperty(data.getValue().getStatus())
         );
 
         table.getColumns().addAll(
-        categoryCol,
-        originalCol,
-        currentCol,
-        spentCol,
-        remainingCol,
-        progressCol,
-        statusCol
-);
+                categoryCol,
+                originalCol,
+                currentCol,
+                spentCol,
+                remainingCol,
+                progressCol,
+                statusCol
+        );
 
-
-        refresh();
-
-        // =====================================
-        // EDIT BUTTON
-        // =====================================
+        // ============================
+        // EDIT SECTION
+        // ============================
 
         Button editBtn = new Button("Edit Selected");
 
@@ -209,45 +186,37 @@ progressCol.setCellFactory(col -> new TableCell<>() {
             BudgetRow selected =
                     table.getSelectionModel().getSelectedItem();
 
-            if (selected == null) return;
+            if (selected == null) {
+                showAlert("Select a category first");
+                return;
+            }
 
             if (selected.isEdited()) {
-                new Alert(Alert.AlertType.INFORMATION,
-                        "Budget can only be edited once per month"
-                ).show();
+                showAlert("Budget can only be edited once per month");
                 return;
             }
 
             TextInputDialog dialog =
                     new TextInputDialog(
-                            String.valueOf(
-                                    selected.getCurrentBudget()
-                            )
+                            String.valueOf(selected.getCurrentBudget())
                     );
 
             dialog.setTitle("Edit Budget");
             dialog.setHeaderText(
-                    "Edit budget for "
-                            + selected.getCategory()
+                    "Edit budget for " + selected.getCategory()
             );
             dialog.setContentText("New limit:");
 
             dialog.showAndWait().ifPresent(value -> {
                 try {
-
-                    double newLimit =
-                            Double.parseDouble(value);
-
+                    double newLimit = Double.parseDouble(value);
                     budgetService.updateBudget(
                             selected.getCategory(),
                             newLimit
                     );
-
                     refresh();
-
                 } catch (Exception ex) {
-                    new Alert(Alert.AlertType.ERROR,
-                            ex.getMessage()).show();
+                    showAlert(ex.getMessage());
                 }
             });
         });
@@ -255,27 +224,98 @@ progressCol.setCellFactory(col -> new TableCell<>() {
         Button backBtn = new Button("Back");
         backBtn.setOnAction(e -> onBack.run());
 
-        VBox top = new VBox(20,
-                title,
-                setSection
-        );
+        VBox bottom = new VBox(10, editBtn, backBtn);
+        bottom.setPadding(new Insets(10));
 
-        VBox bottom = new VBox(10,
-                editBtn,
-                backBtn
-        );
+        // ============================
+        // LAYOUT STRUCTURE
+        // ============================
 
-        setTop(top);
+        topContainer.getChildren().addAll(title, setSection);
+        setTop(topContainer);
         setCenter(table);
         setBottom(bottom);
+
+        refresh();
+    }
+
+    // ============================
+    // ANALYTICS PANEL
+    // ============================
+
+    private HBox createAnalyticsPanel(List<BudgetRow> rows) {
+
+        double totalBudget = 0;
+        double totalSpent = 0;
+
+        for (BudgetRow row : rows) {
+            totalBudget += row.getCurrentBudget();
+            totalSpent += row.getSpent();
+        }
+
+        double remaining = totalBudget - totalSpent;
+
+        double usagePercent = totalBudget == 0
+                ? 0
+                : (totalSpent / totalBudget) * 100;
+
+        Label totalBudgetLbl =
+                new Label("Total Budget: ₹ " + totalBudget);
+
+        Label totalSpentLbl =
+                new Label("Total Spent: ₹ " + totalSpent);
+
+        Label remainingLbl =
+                new Label("Remaining: ₹ " + remaining);
+
+        Label percentLbl =
+                new Label(String.format("Usage: %.2f %%", usagePercent));
+
+        if (usagePercent > 100) {
+            percentLbl.setStyle("-fx-text-fill: red;");
+        } else if (usagePercent > 80) {
+            percentLbl.setStyle("-fx-text-fill: orange;");
+        } else {
+            percentLbl.setStyle("-fx-text-fill: green;");
+        }
+
+        HBox box = new HBox(30,
+                totalBudgetLbl,
+                totalSpentLbl,
+                remainingLbl,
+                percentLbl
+        );
+
+        box.setAlignment(Pos.CENTER);
+        box.setPadding(new Insets(10));
+
+        return box;
     }
 
     private void refresh() {
+
+        List<BudgetRow> rows =
+                budgetService.getCurrentMonthBudgetRows(expenses);
+
         table.setItems(
-                FXCollections.observableArrayList(
-                        budgetService
-                                .getCurrentMonthBudgetRows(expenses)
-                )
+                FXCollections.observableArrayList(rows)
         );
+
+        HBox analytics = createAnalyticsPanel(rows);
+
+        if (topContainer.getChildren().size() > 2) {
+            topContainer.getChildren().remove(2);
+        }
+
+        topContainer.getChildren().add(analytics);
+    }
+
+    private void showAlert(String message) {
+        Alert alert =
+                new Alert(Alert.AlertType.INFORMATION);
+        alert.setTitle("Budget");
+        alert.setHeaderText(null);
+        alert.setContentText(message);
+        alert.showAndWait();
     }
 }
