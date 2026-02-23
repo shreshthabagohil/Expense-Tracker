@@ -1,58 +1,116 @@
 package com.shreshtha.expensetracker.database;
 
-import java.sql.Connection;
-import java.sql.DriverManager;
-import java.sql.SQLException;
-import java.sql.Statement;
+import com.shreshtha.expensetracker.model.Expense;
 
-public class DatabaseManager {
+import java.sql.*;
+import java.util.ArrayList;
+import java.util.List;
 
-    private static final String URL = "jdbc:sqlite:expense_tracker.db";
+public class ExpenseRepository {
 
-    public static Connection connect() throws SQLException {
-        return DriverManager.getConnection(URL);
+    private String currentUser;
+
+    public void setUser(String username) {
+        this.currentUser = username;
     }
 
-    public static void initializeDatabase() {
-        try (Connection conn = connect();
-             Statement stmt = conn.createStatement()) {
+    public void addExpense(Expense expense) {
 
-                stmt.execute("""
-    CREATE TABLE IF NOT EXISTS expenses (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        user TEXT,
-        category TEXT,
-        amount REAL,
-        date TEXT,
-        description TEXT
-    )
-""");
+        String sql = "INSERT INTO expenses(user, category, amount, date, description) VALUES (?, ?, ?, ?, ?)";
 
-            String createExpensesTable = """
-                CREATE TABLE IF NOT EXISTS expenses (
-                    id INTEGER PRIMARY KEY AUTOINCREMENT,
-                    category TEXT NOT NULL,
-                    amount REAL NOT NULL,
-                    date TEXT NOT NULL,
-                    description TEXT
-                );
-            """;
+        try (Connection conn = DatabaseManager.connect();
+             PreparedStatement stmt = conn.prepareStatement(sql)) {
 
-            String createBudgetTable = """
-                CREATE TABLE IF NOT EXISTS budgets (
-                    id INTEGER PRIMARY KEY AUTOINCREMENT,
-                    category TEXT UNIQUE NOT NULL,
-                    original REAL NOT NULL,
-                    current REAL NOT NULL,
-                    edited INTEGER DEFAULT 0
-                );
-            """;
+            stmt.setString(1, currentUser);
+            stmt.setString(2, expense.getCategory());
+            stmt.setDouble(3, expense.getAmount());
+            stmt.setString(4, expense.getDate());
+            stmt.setString(5, expense.getDescription());
 
-            stmt.execute(createExpensesTable);
-            stmt.execute(createBudgetTable);
+            stmt.executeUpdate();
 
         } catch (SQLException e) {
             e.printStackTrace();
         }
+    }
+
+    public List<Expense> getAllExpenses() {
+
+        List<Expense> expenses = new ArrayList<>();
+
+        String sql = "SELECT * FROM expenses WHERE user = ?";
+
+        try (Connection conn = DatabaseManager.connect();
+             PreparedStatement stmt = conn.prepareStatement(sql)) {
+
+            stmt.setString(1, currentUser);
+
+            ResultSet rs = stmt.executeQuery();
+
+            while (rs.next()) {
+
+                Expense expense = new Expense(
+                        rs.getString("category"),
+                        rs.getDouble("amount"),
+                        rs.getString("date"),
+                        rs.getString("description")
+                );
+
+                expenses.add(expense);
+            }
+
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
+
+        return expenses;
+    }
+
+    public void deleteExpense(Expense expense) {
+
+        String sql = "DELETE FROM expenses WHERE user = ? AND category = ? AND amount = ? AND date = ?";
+
+        try (Connection conn = DatabaseManager.connect();
+             PreparedStatement stmt = conn.prepareStatement(sql)) {
+
+            stmt.setString(1, currentUser);
+            stmt.setString(2, expense.getCategory());
+            stmt.setDouble(3, expense.getAmount());
+            stmt.setString(4, expense.getDate());
+
+            stmt.executeUpdate();
+
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
+    }
+
+    public String getHighestCategory() {
+
+        String sql = """
+                SELECT category, SUM(amount) as total
+                FROM expenses
+                WHERE user = ?
+                GROUP BY category
+                ORDER BY total DESC
+                LIMIT 1
+                """;
+
+        try (Connection conn = DatabaseManager.connect();
+             PreparedStatement stmt = conn.prepareStatement(sql)) {
+
+            stmt.setString(1, currentUser);
+
+            ResultSet rs = stmt.executeQuery();
+
+            if (rs.next()) {
+                return rs.getString("category");
+            }
+
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
+
+        return "No data";
     }
 }
