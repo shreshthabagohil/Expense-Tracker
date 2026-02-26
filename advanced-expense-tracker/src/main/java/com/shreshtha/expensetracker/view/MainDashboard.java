@@ -1,6 +1,7 @@
 package com.shreshtha.expensetracker.view;
 
 import com.shreshtha.expensetracker.controller.BudgetService;
+import com.shreshtha.expensetracker.database.DatabaseManager;
 import com.shreshtha.expensetracker.database.ExpenseRepository;
 import javafx.application.Application;
 import javafx.geometry.Insets;
@@ -12,6 +13,7 @@ import javafx.scene.image.ImageView;
 import javafx.scene.layout.BorderPane;
 import javafx.scene.layout.VBox;
 import javafx.stage.Stage;
+import com.shreshtha.expensetracker.view.BudgetView;
 
 public class MainDashboard extends Application {
 
@@ -22,6 +24,7 @@ public class MainDashboard extends Application {
     @Override
     public void start(Stage stage) {
 
+        DatabaseManager.initializeDatabase();
         TextInputDialog dialog = new TextInputDialog();
         dialog.setTitle("Login");
         dialog.setHeaderText("Welcome to Expense Tracker");
