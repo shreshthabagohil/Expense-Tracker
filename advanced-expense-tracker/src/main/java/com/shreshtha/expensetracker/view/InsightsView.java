@@ -26,6 +26,7 @@ public class InsightsView extends VBox {
         subtitle.getStyleClass().add("page-subtitle");
 
         String topCategory = repo.getHighestCategory();
+        String topMood = repo.getHighestMood();
 
         Label insight1 = new Label("• You spend the most on: " + topCategory);
         Label insight2 = new Label("• You spend the most when feeling: " + topMood);
