@@ -1,87 +1,229 @@
 package com.shreshtha.expensetracker.controller;
 
-import com.shreshtha.expensetracker.database.BudgetStorage;
-import com.shreshtha.expensetracker.database.BudgetStorage.BudgetDataDTO;
+import com.shreshtha.expensetracker.database.DatabaseManager;
 import com.shreshtha.expensetracker.model.*;
 
+import java.sql.*;
 import java.util.*;
 
 public class BudgetService {
 
-    private Map<MonthKey, Map<String, BudgetDataDTO>> monthlyBudgets;
     private String username;
 
     public void setUser(String username) {
         this.username = username;
-        this.monthlyBudgets = BudgetStorage.load(username);
     }
+
+    // ===============================
+    // SET BUDGET (ONLY ONCE)
+    // ===============================
 
     public void setBudgetOnce(String category, double limit) {
 
-        MonthKey current = MonthKey.current();
-        monthlyBudgets.putIfAbsent(current, new HashMap<>());
+        String month = MonthKey.current().toString();
 
-        if (monthlyBudgets.get(current).containsKey(category)) {
-            throw new IllegalStateException("Budget already set for this month");
+        try (Connection conn = DatabaseManager.connect()) {
+
+            // Check if already exists
+            String checkSql =
+                    "SELECT amount FROM budgets WHERE username = ? AND month = ? AND category = ?";
+
+            PreparedStatement checkStmt =
+                    conn.prepareStatement(checkSql);
+
+            checkStmt.setString(1, username);
+            checkStmt.setString(2, month);
+            checkStmt.setString(3, category);
+
+            ResultSet rs = checkStmt.executeQuery();
+
+            if (rs.next()) {
+                throw new IllegalStateException(
+                        "Budget already set for this category."
+                );
+            }
+
+            String insertSql =
+                    "INSERT INTO budgets(username, month, category, amount, edited) VALUES (?, ?, ?, ?, 0)";
+
+            PreparedStatement insertStmt =
+                    conn.prepareStatement(insertSql);
+
+            insertStmt.setString(1, username);
+            insertStmt.setString(2, month);
+            insertStmt.setString(3, category);
+            insertStmt.setDouble(4, limit);
+
+            insertStmt.executeUpdate();
+
+        } catch (SQLException e) {
+            e.printStackTrace();
         }
-
-        monthlyBudgets.get(current).put(
-                category,
-                new BudgetDataDTO(limit, limit, false)
-        );
-
-        BudgetStorage.save(username, monthlyBudgets);
     }
+
+    // ===============================
+    // EDIT BUDGET (ONLY ONCE)
+    // ===============================
 
     public void updateBudget(String category, double newLimit) {
 
-        MonthKey current = MonthKey.current();
+        String month = MonthKey.current().toString();
 
-        if (!monthlyBudgets.containsKey(current) ||
-                !monthlyBudgets.get(current).containsKey(category)) {
-            throw new IllegalStateException("Budget does not exist");
+        try (Connection conn = DatabaseManager.connect()) {
+
+            String checkSql =
+                    "SELECT edited FROM budgets WHERE username = ? AND month = ? AND category = ?";
+
+            PreparedStatement checkStmt =
+                    conn.prepareStatement(checkSql);
+
+            checkStmt.setString(1, username);
+            checkStmt.setString(2, month);
+            checkStmt.setString(3, category);
+
+            ResultSet rs = checkStmt.executeQuery();
+
+            if (!rs.next()) {
+                throw new IllegalStateException("No budget for category.");
+            }
+
+            boolean alreadyEdited = rs.getInt("edited") == 1;
+
+            if (alreadyEdited) {
+                throw new IllegalStateException(
+                        "Budget can only be edited once per month."
+                );
+            }
+
+            String updateSql =
+                    "UPDATE budgets SET amount = ?, edited = 1 WHERE username = ? AND month = ? AND category = ?";
+
+            PreparedStatement updateStmt =
+                    conn.prepareStatement(updateSql);
+
+            updateStmt.setDouble(1, newLimit);
+            updateStmt.setString(2, username);
+            updateStmt.setString(3, month);
+            updateStmt.setString(4, category);
+
+            updateStmt.executeUpdate();
+
+        } catch (SQLException e) {
+            e.printStackTrace();
         }
-
-        BudgetDataDTO data = monthlyBudgets.get(current).get(category);
-
-        if (data.edited) {
-            throw new IllegalStateException("Budget can only be edited once");
-        }
-
-        data.current = newLimit;
-        data.edited = true;
-
-        BudgetStorage.save(username, monthlyBudgets);
     }
 
-    public List<BudgetRow> getCurrentMonthBudgetRows(List<Expense> expenses) {
+    // ===============================
+    // GET BUDGET ROWS FOR UI
+    // ===============================
 
-        MonthKey current = MonthKey.current();
-
-        Map<String, BudgetDataDTO> limits =
-                monthlyBudgets.getOrDefault(current, new HashMap<>());
-
-        Map<String, Double> spent = new HashMap<>();
-
-        for (Expense e : expenses) {
-            spent.merge(e.getCategory(), e.getAmount(), Double::sum);
-        }
+    public List<BudgetRow> getCurrentMonthBudgetRows(
+            List<Expense> expenses) {
 
         List<BudgetRow> rows = new ArrayList<>();
 
-        for (String cat : limits.keySet()) {
+        String month = MonthKey.current().toString();
 
-            BudgetDataDTO data = limits.get(cat);
+        try (Connection conn = DatabaseManager.connect()) {
 
-            rows.add(new BudgetRow(
-                    cat,
-                    data.original,
-                    data.current,
-                    spent.getOrDefault(cat, 0.0),
-                    data.edited
-            ));
+            String sql =
+                    "SELECT category, amount, edited FROM budgets WHERE username = ? AND month = ?";
+
+            PreparedStatement stmt =
+                    conn.prepareStatement(sql);
+
+            stmt.setString(1, username);
+            stmt.setString(2, month);
+
+            ResultSet rs = stmt.executeQuery();
+
+            Map<String, Double> spentMap = new HashMap<>();
+
+            for (Expense e : expenses) {
+                spentMap.merge(
+                        e.getCategory(),
+                        e.getAmount(),
+                        Double::sum
+                );
+            }
+
+            while (rs.next()) {
+
+                String category = rs.getString("category");
+                double amount = rs.getDouble("amount");
+                boolean edited = rs.getInt("edited") == 1;
+
+                rows.add(
+                        new BudgetRow(
+                                category,
+                                amount,      // original
+                                amount,      // current
+                                edited,
+                                spentMap.getOrDefault(category, 0.0)
+                        )
+                );
+            }
+
+        } catch (SQLException e) {
+            e.printStackTrace();
         }
 
         return rows;
     }
+
+    // =========================================
+// CHECK BUDGET WARNINGS (Database Version)
+// =========================================
+public List<String> checkBudgetWarnings(List<Expense> expenses) {
+
+    List<String> warnings = new ArrayList<>();
+
+    String month = MonthKey.current().toString();
+
+    try (Connection conn = DatabaseManager.connect()) {
+
+        String sql =
+                "SELECT category, amount FROM budgets WHERE username = ? AND month = ?";
+
+        PreparedStatement stmt =
+                conn.prepareStatement(sql);
+
+        stmt.setString(1, username);
+        stmt.setString(2, month);
+
+        ResultSet rs = stmt.executeQuery();
+
+        // Calculate spent per category
+        Map<String, Double> spent = new HashMap<>();
+
+        for (Expense e : expenses) {
+            spent.merge(
+                    e.getCategory(),
+                    e.getAmount(),
+                    Double::sum
+            );
+        }
+
+        while (rs.next()) {
+
+            String category = rs.getString("category");
+            double limit = rs.getDouble("amount");
+
+            double used = spent.getOrDefault(category, 0.0);
+
+            if (used >= limit) {
+                warnings.add("❌ Budget exceeded for " + category);
+            }
+            else if (used >= limit * 0.8) {
+                warnings.add("⚠ You are close to exceeding budget for "
+                        + category);
+            }
+        }
+
+    } catch (SQLException e) {
+        e.printStackTrace();
+    }
+
+    return warnings;
+}
 }
