@@ -5,11 +5,12 @@ import com.shreshtha.expensetracker.model.MonthlySummary;
 
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
 public class SummaryService {
 
-    public MonthlySummary generate(ArrayList<Expense> expenses) 
+    public MonthlySummary generate(List<Expense> expenses) 
     {
         double total = 0;
         Map<String, Double> categoryTotals = new HashMap<>();
@@ -31,7 +32,7 @@ public class SummaryService {
         return new MonthlySummary(expenses, total, categoryTotals, highestCategory);
     }
 
-    public Map<String, Double> spendingByMood(ArrayList<Expense> expenses) 
+    public Map<String, Double> spendingByMood(List<Expense> expenses) 
     {
         Map<String,Double> moodTotals =new HashMap<>();
 
@@ -43,7 +44,7 @@ public class SummaryService {
         return moodTotals;
     }
 
-    public Map<String,Double> averageSpendingPerCategory(ArrayList<Expense> expenses)
+    public Map<String,Double> averageSpendingPerCategory(List<Expense> expenses)
     {
 
         Map<String,Double> total=new HashMap<>();
@@ -66,7 +67,7 @@ public class SummaryService {
     }
 
 
-    public void printInsights(ArrayList <Expense> expenses)
+    public void printInsights(List<Expense> expenses)
     {
 
         if(expenses.isEmpty())
