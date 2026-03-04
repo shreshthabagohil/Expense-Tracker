@@ -12,7 +12,7 @@ public class SummaryService {
 
     public MonthlySummary generate(List<Expense> expenses) 
     {
-        double total = 0;int sac;
+        double total = 0;
         Map<String, Double> categoryTotals = new HashMap<>();
 
         for (Expense e : expenses) {
