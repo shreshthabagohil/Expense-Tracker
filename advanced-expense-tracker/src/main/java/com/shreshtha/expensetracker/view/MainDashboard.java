@@ -13,7 +13,6 @@ import javafx.scene.image.ImageView;
 import javafx.scene.layout.BorderPane;
 import javafx.scene.layout.VBox;
 import javafx.stage.Stage;
-import com.shreshtha.expensetracker.view.BudgetView;
 
 public class MainDashboard extends Application {
 
@@ -21,24 +20,35 @@ public class MainDashboard extends Application {
     private ExpenseRepository repo;
     private BudgetService budgetService;
 
+    private DashBoardView dashboardView;
+    private String username;
+
     @Override
     public void start(Stage stage) {
 
+        // Initialize DB
         DatabaseManager.initializeDatabase();
+
+        // Login Dialog
         TextInputDialog dialog = new TextInputDialog();
         dialog.setTitle("Login");
         dialog.setHeaderText("Welcome to Expense Tracker");
         dialog.setContentText("Enter username:");
-        dialog.getDialogPane().setGraphic(null); // remove question mark
+        dialog.getDialogPane().setGraphic(null);
 
-        String username = dialog.showAndWait().orElse("");
-        if (username.isBlank()) System.exit(0);
+        username = dialog.showAndWait().orElse("");
+        if (username.isBlank()) {
+            System.exit(0);
+        }
 
+        // Initialize repo and services
         repo = new ExpenseRepository();
         budgetService = new BudgetService();
+
         repo.setUser(username);
         budgetService.setUser(username);
 
+        // Sidebar buttons
         Button dashboardBtn = sideButton("Dashboard", "/icons/dashboard.png");
         Button addExpenseBtn = sideButton("Add Expense", "/icons/save.png");
         Button viewExpenseBtn = sideButton("View Expenses", "/icons/refresh.png");
@@ -54,21 +64,33 @@ public class MainDashboard extends Application {
                 insightsBtn,
                 exitBtn
         );
+
         sidebar.setSpacing(12);
         sidebar.setPadding(new Insets(20));
         sidebar.getStyleClass().add("sidebar");
 
-        DashBoardView dashboardView = new DashBoardView(username, repo);
+        // Create Dashboard view
+        dashboardView = new DashBoardView(username, repo);
 
         root = new BorderPane();
         root.setLeft(sidebar);
         root.setCenter(dashboardView);
 
-        dashboardBtn.setOnAction(e -> root.setCenter(dashboardView));
+        // =========================
+        // NAVIGATION HANDLERS
+        // =========================
+
+        dashboardBtn.setOnAction(e -> {
+            dashboardView.refresh();
+            root.setCenter(dashboardView);
+        });
 
         addExpenseBtn.setOnAction(e ->
                 root.setCenter(new AddExpenseView(
-                        () -> root.setCenter(dashboardView),
+                        () -> {
+                            dashboardView.refresh();
+                            root.setCenter(dashboardView);
+                        },
                         repo,
                         budgetService
                 ))
@@ -79,25 +101,28 @@ public class MainDashboard extends Application {
         );
 
         budgetBtn.setOnAction(e ->
-        root.setCenter(
-                new BudgetView(
+                root.setCenter(new BudgetView(
                         budgetService,
-                        repo.getAllExpenses(), 
-                        () -> root.setCenter(dashboardView)
-                )
-            )
-         );
-
-
-        insightsBtn.setOnAction(e ->
-                root.setCenter(new InsightsView(
-                        repo,
-                        () -> root.setCenter(dashboardView)
+                        repo.getAllExpenses(),
+                        () -> {
+                            dashboardView.refresh();
+                            root.setCenter(dashboardView);
+                        }
                 ))
         );
 
+        insightsBtn.setOnAction(e -> {
+            InsightsView insightsView =
+                    new InsightsView(repo, () -> {
+                        dashboardView.refresh();
+                        root.setCenter(dashboardView);
+                    });
+            root.setCenter(insightsView);
+        });
+
         exitBtn.setOnAction(e -> stage.close());
 
+        // Scene
         Scene scene = new Scene(root, 900, 600);
         scene.getStylesheets().add(
                 getClass().getResource("/theme.css").toExternalForm()
@@ -109,6 +134,7 @@ public class MainDashboard extends Application {
     }
 
     private Button sideButton(String text, String iconPath) {
+
         ImageView icon = new ImageView(
                 new Image(getClass().getResourceAsStream(iconPath))
         );
@@ -120,6 +146,7 @@ public class MainDashboard extends Application {
         btn.getStyleClass().add("sidebar-button");
         btn.setPrefWidth(170);
         btn.setPrefHeight(40);
+
         return btn;
     }
 
