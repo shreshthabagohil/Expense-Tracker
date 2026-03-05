@@ -6,6 +6,8 @@ import javafx.scene.image.ImageView;
 import javafx.scene.layout.HBox;
 import javafx.scene.layout.VBox;
 
+import java.util.List;
+
 import com.shreshtha.expensetracker.controller.BudgetService;
 import com.shreshtha.expensetracker.database.ExpenseRepository;
 import com.shreshtha.expensetracker.model.Expense;
@@ -39,7 +41,7 @@ public class AddExpenseView extends VBox
 
       ComboBox<String> categoryBox = new ComboBox<>();
       categoryBox.getItems().addAll(
-            "Food", "Transport", "Shopping", "Entertainment", "Other"
+              com.shreshtha.expensetracker.model.CategoryUtil.getCategories()
       );
       categoryBox.setPromptText("Category");
       categoryBox.setMaxWidth(300);
@@ -93,7 +95,31 @@ public class AddExpenseView extends VBox
             Expense expense=new Expense(amount, category, date, mood,description);
 
             repo.addExpense(expense);
-            budgetService.checkBudgets(repo.getAllExpenses());
+            List<String> warnings =
+        budgetService.checkBudgetWarnings(
+                repo.getAllExpenses()
+        );
+
+if (!warnings.isEmpty()) {
+
+    Alert alert =
+            new Alert(Alert.AlertType.WARNING);
+
+    alert.setTitle("Budget Warning");
+    alert.setHeaderText("Attention!");
+
+    alert.setContentText(
+            String.join("\n", warnings)
+    );
+
+    alert.getDialogPane().getStylesheets().add(
+            getClass()
+                    .getResource("/theme.css")
+                    .toExternalForm()
+    );
+
+    alert.showAndWait();
+}
 
             showAlert("Expense saved successfully!");
 
