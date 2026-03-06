@@ -3,11 +3,15 @@ package com.shreshtha.expensetracker.controller;
 import com.shreshtha.expensetracker.database.DatabaseManager;
 import com.shreshtha.expensetracker.model.*;
 
+
 import java.sql.*;
 import java.util.*;
 
 public class BudgetService {
 
+
+    private Set<String> warned80 = new HashSet<>();
+    private Set<String> warned100 = new HashSet<>();
     private String username;
 
     public void setUser(String username) {
@@ -178,31 +182,25 @@ public List<String> checkBudgetWarnings(List<Expense> expenses) {
 
     List<String> warnings = new ArrayList<>();
 
-    String month = MonthKey.current().toString();
+    String currentMonth = java.time.YearMonth.now().toString();
+
+    Map<String, Double> spent = new HashMap<>();
+
+    for (Expense e : expenses) {
+        spent.merge(e.getCategory(), e.getAmount(), Double::sum);
+    }
 
     try (Connection conn = DatabaseManager.connect()) {
 
         String sql =
-                "SELECT category, amount FROM budgets WHERE username = ? AND month = ?";
+            "SELECT category, amount FROM budgets WHERE username=? AND month=?";
 
-        PreparedStatement stmt =
-                conn.prepareStatement(sql);
+        PreparedStatement stmt = conn.prepareStatement(sql);
 
         stmt.setString(1, username);
-        stmt.setString(2, month);
+        stmt.setString(2, currentMonth);
 
         ResultSet rs = stmt.executeQuery();
-
-        // Calculate spent per category
-        Map<String, Double> spent = new HashMap<>();
-
-        for (Expense e : expenses) {
-            spent.merge(
-                    e.getCategory(),
-                    e.getAmount(),
-                    Double::sum
-            );
-        }
 
         while (rs.next()) {
 
@@ -214,13 +212,13 @@ public List<String> checkBudgetWarnings(List<Expense> expenses) {
             if (used >= limit) {
                 warnings.add("❌ Budget exceeded for " + category);
             }
+
             else if (used >= limit * 0.8) {
-                warnings.add("⚠ You are close to exceeding budget for "
-                        + category);
+                warnings.add("⚠ You are close to exceeding budget for " + category);
             }
         }
 
-    } catch (SQLException e) {
+    } catch (Exception e) {
         e.printStackTrace();
     }
 
