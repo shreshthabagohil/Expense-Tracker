@@ -9,11 +9,17 @@ import javafx.scene.control.Label;
 import javafx.scene.layout.VBox;
 
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
 public class DashBoardView extends VBox {
 
+    private BarChart<String, Number> chart;
+    private ExpenseRepository repo;
+
     public DashBoardView(String username, ExpenseRepository repo) {
+
+        this.repo = repo;
 
         setPadding(new Insets(30));
         setSpacing(20);
@@ -22,39 +28,42 @@ public class DashBoardView extends VBox {
         Label title = new Label("Welcome, " + username + " 👋");
         title.getStyleClass().add("page-title");
 
-        Label subtitle = new Label("Your category-wise expense overview");
-        subtitle.getStyleClass().add("page-subtitle");
-
         CategoryAxis xAxis = new CategoryAxis();
-        xAxis.setLabel("Category");
-
         NumberAxis yAxis = new NumberAxis();
         yAxis.setLabel("Amount Spent");
 
-        BarChart<String, Number> chart = new BarChart<>(xAxis, yAxis);
+        chart = new BarChart<>(xAxis, yAxis);
         chart.setLegendVisible(false);
         chart.setAnimated(false);
         chart.setPrefHeight(350);
 
+        getChildren().addAll(title, chart);
+
+        refresh();
+    }
+
+    public void refresh() {
+        chart.getData().clear();
+
         Map<String, Double> totals = new HashMap<>();
+
         for (Expense e : repo.getAllExpenses()) {
-            totals.put(
-                e.getCategory(),
-                totals.getOrDefault(e.getCategory(), 0.0) + e.getAmount()
+            totals.merge(
+                    e.getCategory(),
+                    e.getAmount(),
+                    Double::sum
             );
         }
 
-        XYChart.Series<String, Number> series = new XYChart.Series<>();
+        XYChart.Series<String, Number> series =
+                new XYChart.Series<>();
+
         totals.forEach((cat, amt) ->
-            series.getData().add(new XYChart.Data<>(cat, amt))
+                series.getData().add(
+                        new XYChart.Data<>(cat, amt)
+                )
         );
 
         chart.getData().add(series);
-
-        chart.lookupAll(".default-color0.chart-bar")
-             .forEach(n -> n.setStyle("-fx-bar-fill: #6C7CF5;"));
-
-
-        getChildren().addAll(title, subtitle, chart);
     }
 }
