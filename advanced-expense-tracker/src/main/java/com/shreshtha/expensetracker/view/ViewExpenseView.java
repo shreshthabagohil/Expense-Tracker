@@ -88,20 +88,17 @@ public class ViewExpenseView extends VBox {
         if (selected == null) return;
 
         Alert confirm = new Alert(Alert.AlertType.CONFIRMATION);
-        confirm.setTitle("Confirm Delete");
-        confirm.setHeaderText(null);
-        confirm.setContentText("Delete selected expense?");
-        confirm.getDialogPane().getStylesheets().add(
-                getClass().getResource("/theme.css").toExternalForm()
-        );
-        confirm.getDialogPane().setGraphic(null); // removes question mark
+confirm.setHeaderText("Delete expense?");
+confirm.setContentText("Are you sure?");
 
-        confirm.showAndWait().ifPresent(res -> {
-            if (res == ButtonType.OK) {
-                repo.deleteExpense(selected);
-                refreshTable();
-            }
-        });
+confirm.showAndWait().ifPresent(res -> {
+
+    if (res == ButtonType.OK) {
+
+        repo.deleteExpense(selected);
+        refreshTable();
+    }
+});
     }
 
     private Button iconButton(String text, String iconPath) {
