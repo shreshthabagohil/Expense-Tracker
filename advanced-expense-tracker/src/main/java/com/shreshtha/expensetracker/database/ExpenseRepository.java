@@ -8,57 +8,63 @@ import java.util.List;
 
 public class ExpenseRepository {
 
-    private String currentUser;
+    private String username;
 
     public void setUser(String username) {
-        this.currentUser = username;
+        this.username = username;
     }
 
-    // ================= ADD =================
-
-    public void addExpense(Expense expense) {
+    // ===============================
+    // ADD EXPENSE
+    // ===============================
+    public void addExpense(Expense e) {
 
         String sql = """
             INSERT INTO expenses
-            (user, category, amount, date, mood, description)
+            (username, category, amount, date, mood, description)
             VALUES (?, ?, ?, ?, ?, ?)
         """;
 
         try (Connection conn = DatabaseManager.connect();
              PreparedStatement stmt = conn.prepareStatement(sql)) {
 
-            stmt.setString(1, currentUser);
-            stmt.setString(2, expense.getCategory());
-            stmt.setDouble(3, expense.getAmount());
-            stmt.setString(4, expense.getDate());
-            stmt.setString(5, expense.getMood());
-            stmt.setString(6, expense.getDescription());
+            stmt.setString(1, username);
+            stmt.setString(2, e.getCategory());
+            stmt.setDouble(3, e.getAmount());
+            stmt.setString(4, e.getDate());
+            stmt.setString(5, e.getMood());
+            stmt.setString(6, e.getDescription());
 
             stmt.executeUpdate();
 
-        } catch (SQLException e) {
-            e.printStackTrace();
+        } catch (SQLException ex) {
+            ex.printStackTrace();
         }
     }
 
-    // ================= GET ALL =================
-
+    // ===============================
+    // GET ALL EXPENSES
+    // ===============================
     public List<Expense> getAllExpenses() {
 
-        List<Expense> expenses = new ArrayList<>();
+        List<Expense> list = new ArrayList<>();
 
-        String sql = "SELECT * FROM expenses WHERE user = ?";
+        String sql = """
+            SELECT * FROM expenses
+            WHERE username = ?
+            ORDER BY date DESC
+        """;
 
         try (Connection conn = DatabaseManager.connect();
              PreparedStatement stmt = conn.prepareStatement(sql)) {
 
-            stmt.setString(1, currentUser);
+            stmt.setString(1, username);
 
             ResultSet rs = stmt.executeQuery();
 
             while (rs.next()) {
 
-                Expense expense = new Expense(
+                Expense e = new Expense(
                         rs.getDouble("amount"),
                         rs.getString("category"),
                         rs.getString("date"),
@@ -66,102 +72,64 @@ public class ExpenseRepository {
                         rs.getString("description")
                 );
 
-                expenses.add(expense);
+                list.add(e);
             }
 
-        } catch (SQLException e) {
-            e.printStackTrace();
+        } catch (SQLException ex) {
+            ex.printStackTrace();
         }
 
-        return expenses;
+        return list;
     }
 
-    // ================= DELETE =================
-
-    public void deleteExpense(Expense expense) {
+    // ===============================
+    // DELETE EXPENSE
+    // ===============================
+    public void deleteExpense(Expense e) {
 
         String sql = """
             DELETE FROM expenses
-            WHERE user = ?
-              AND category = ?
-              AND amount = ?
-              AND date = ?
-              AND mood = ?
+            WHERE username = ?
+            AND amount = ?
+            AND category = ?
+            AND date = ?
+            AND description = ?
         """;
 
         try (Connection conn = DatabaseManager.connect();
              PreparedStatement stmt = conn.prepareStatement(sql)) {
 
-            stmt.setString(1, currentUser);
-            stmt.setString(2, expense.getCategory());
-            stmt.setDouble(3, expense.getAmount());
-            stmt.setString(4, expense.getDate());
-            stmt.setString(5, expense.getMood());
+            stmt.setString(1, username);
+            stmt.setDouble(2, e.getAmount());
+            stmt.setString(3, e.getCategory());
+            stmt.setString(4, e.getDate());
+            stmt.setString(5, e.getDescription());
 
             stmt.executeUpdate();
 
-        } catch (SQLException e) {
-            e.printStackTrace();
+        } catch (SQLException ex) {
+            ex.printStackTrace();
         }
     }
 
-    // ================= ANALYTICS =================
-
+    // ===============================
+    // INSIGHTS HELPERS
+    // ===============================
     public String getHighestCategory() {
 
-        String sql = """
-            SELECT category, SUM(amount) as total
-            FROM expenses
-            WHERE user = ?
-            GROUP BY category
-            ORDER BY total DESC
-            LIMIT 1
-        """;
-
-        try (Connection conn = DatabaseManager.connect();
-             PreparedStatement stmt = conn.prepareStatement(sql)) {
-
-            stmt.setString(1, currentUser);
-
-            ResultSet rs = stmt.executeQuery();
-
-            if (rs.next()) {
-                return rs.getString("category");
-            }
-
-        } catch (SQLException e) {
-            e.printStackTrace();
-        }
-
-        return "No data";
+        return getAllExpenses().stream()
+                .reduce((e1, e2) ->
+                        e1.getAmount() > e2.getAmount() ? e1 : e2)
+                .map(Expense::getCategory)
+                .orElse("N/A");
     }
 
     public String getHighestMood() {
 
-        String sql = """
-            SELECT mood, COUNT(*) as total
-            FROM expenses
-            WHERE user = ?
-            GROUP BY mood
-            ORDER BY total DESC
-            LIMIT 1
-        """;
-
-        try (Connection conn = DatabaseManager.connect();
-             PreparedStatement stmt = conn.prepareStatement(sql)) {
-
-            stmt.setString(1, currentUser);
-
-            ResultSet rs = stmt.executeQuery();
-
-            if (rs.next()) {
-                return rs.getString("mood");
-            }
-
-        } catch (SQLException e) {
-            e.printStackTrace();
-        }
-
-        return "No data";
+        return getAllExpenses().stream()
+                .reduce((e1, e2) ->
+                        e1.getAmount() > e2.getAmount() ? e1 : e2)
+                .map(Expense::getMood)
+                .orElse("N/A");
     }
 }
