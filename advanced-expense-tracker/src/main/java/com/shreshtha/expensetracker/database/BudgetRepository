@@ -17,21 +17,25 @@ public class BudgetRepository {
         this.conn = conn;
     }
 
-    public void saveBudget(String username, String month, double amount) throws SQLException {
+    public void saveBudget(String username, String category, double amount) throws SQLException {
 
-        String sql = """
-            INSERT INTO budgets(username, month, amount)
-            VALUES (?, ?, ?)
-            ON CONFLICT(username, month)
-            DO UPDATE SET amount = excluded.amount
-        """;
+    String month = MonthKey.current().toString();
 
-        PreparedStatement ps = conn.prepareStatement(sql);
-        ps.setString(1, username);
-        ps.setString(2, month);
-        ps.setDouble(3, amount);
-        ps.executeUpdate();
-    }
+    String sql = """
+        INSERT INTO budgets(username, month, category, amount)
+        VALUES (?, ?, ?, ?)
+        ON CONFLICT(username, month, category)
+        DO UPDATE SET amount = excluded.amount
+    """;
+
+    PreparedStatement ps = conn.prepareStatement(sql);
+    ps.setString(1, username);
+    ps.setString(2, month);
+    ps.setString(3, category);
+    ps.setDouble(4, amount);
+
+    ps.executeUpdate();
+}
 
     public Map<String, Double> getBudgets(String username) throws SQLException {
 
@@ -106,4 +110,55 @@ public List<String> checkBudgetWarnings(List<Expense> expenses,String username) 
 
     return warnings;
 }
+
+public void rolloverBudget(String username) {
+
+    String currentMonth = MonthKey.current().toString();
+
+    String previousMonth =
+            java.time.YearMonth.now()
+                    .minusMonths(1)
+                    .toString();
+
+    try {
+
+        // check if current month already has budgets
+        String checkSql =
+                "SELECT COUNT(*) FROM budgets WHERE username=? AND month=?";
+
+        PreparedStatement checkStmt =
+                conn.prepareStatement(checkSql);
+
+        checkStmt.setString(1, username);
+        checkStmt.setString(2, currentMonth);
+
+        ResultSet rs = checkStmt.executeQuery();
+
+        if (rs.next() && rs.getInt(1) > 0) {
+            return; // already exists, do nothing
+        }
+
+        // copy budgets from previous month
+        String copySql =
+                """
+                INSERT INTO budgets(username, month, category, amount)
+                SELECT username, ?, category, amount
+                FROM budgets
+                WHERE username=? AND month=?
+                """;
+
+        PreparedStatement copyStmt =
+                conn.prepareStatement(copySql);
+
+        copyStmt.setString(1, currentMonth);
+        copyStmt.setString(2, username);
+        copyStmt.setString(3, previousMonth);
+
+        copyStmt.executeUpdate();
+
+    } catch (SQLException e) {
+        e.printStackTrace();
+    }
+}
+
 }
