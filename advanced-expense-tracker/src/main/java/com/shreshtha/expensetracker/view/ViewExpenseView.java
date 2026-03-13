@@ -26,12 +26,11 @@ public class ViewExpenseView extends VBox {
         Label title = new Label("View Expenses");
         title.getStyleClass().add("page-title");
 
-        setupTable();
-        refreshTable();
+        setupTable(); loadData();
 
         Button refreshBtn = iconButton("Refresh", "/icons/refresh.png");
         refreshBtn.getStyleClass().add("primary-btn");
-        refreshBtn.setOnAction(e -> refreshTable());
+        refreshBtn.setOnAction(e -> loadData());
 
         Button deleteBtn = iconButton("Delete Selected", "/icons/delete.png");
         deleteBtn.getStyleClass().add("danger-btn");
@@ -47,6 +46,16 @@ public class ViewExpenseView extends VBox {
 
         getChildren().addAll(title, table, actions);
     }
+
+    private void loadData(){
+
+    ObservableList<Expense> data =
+            FXCollections.observableArrayList(
+                    repo.getAllExpenses()
+            );
+
+    table.setItems(data);
+}
 
     private void setupTable() {
         TableColumn<Expense, Double> amount = new TableColumn<>("Amount");
@@ -96,7 +105,7 @@ confirm.showAndWait().ifPresent(res -> {
     if (res == ButtonType.OK) {
 
         repo.deleteExpense(selected);
-        refreshTable();
+        loadData();
     }
 });
     }
