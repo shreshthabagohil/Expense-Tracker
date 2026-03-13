@@ -1,5 +1,6 @@
 package com.shreshtha.expensetracker.controller;
 
+import com.shreshtha.expensetracker.database.BudgetRepository;
 import com.shreshtha.expensetracker.database.DatabaseManager;
 import com.shreshtha.expensetracker.model.*;
 
@@ -9,14 +10,29 @@ import java.util.*;
 
 public class BudgetService {
 
-
-    private Set<String> warned80 = new HashSet<>();
-    private Set<String> warned100 = new HashSet<>();
+    private Connection conn;
     private String username;
+    private BudgetRepository budgetRepo;
 
-    public void setUser(String username) {
-        this.username = username;
+    public BudgetService() {
+
+    try {
+
+        conn = DatabaseManager.connect();
+        budgetRepo = new BudgetRepository(conn);
+
+    } catch (SQLException e) {
+        e.printStackTrace();
     }
+}
+
+   public void setUser(String username) {
+
+    this.username = username;
+
+    // automatically create budgets for new month
+    budgetRepo.rolloverBudget(username);
+}
 
     // ===============================
     // SET BUDGET (ONLY ONCE)
@@ -190,7 +206,7 @@ public List<String> checkBudgetWarnings(List<Expense> expenses) {
         spent.merge(e.getCategory(), e.getAmount(), Double::sum);
     }
 
-    try (Connection conn = DatabaseManager.connect()) {
+    try {
 
         String sql =
             "SELECT category, amount FROM budgets WHERE username=? AND month=?";
@@ -224,4 +240,5 @@ public List<String> checkBudgetWarnings(List<Expense> expenses) {
 
     return warnings;
 }
+
 }
