@@ -49,6 +49,6 @@ public class Budget {
 
     // Used by UI
     public String getStatus() {
-        return edited? "EDITED": "SET";
+        return edited ? "EDITED" : "SET";
     }
 }
