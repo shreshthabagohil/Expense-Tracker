@@ -47,70 +47,64 @@ public class ExpenseRepository {
     // ===============================
     public List<Expense> getAllExpenses() {
 
-        List<Expense> list = new ArrayList<>();
+    List<Expense> list = new ArrayList<>();
 
-        String sql = """
-            SELECT * FROM expenses
-            WHERE username = ?
-            ORDER BY date DESC
-        """;
+    String sql = """
+        SELECT * FROM expenses
+        WHERE username = ?
+        ORDER BY id DESC
+    """;
 
-        try (Connection conn = DatabaseManager.connect();
-             PreparedStatement stmt = conn.prepareStatement(sql)) {
+    try (Connection conn = DatabaseManager.connect();
+         PreparedStatement stmt = conn.prepareStatement(sql)) {
 
-            stmt.setString(1, username);
+        stmt.setString(1, username);
 
-            ResultSet rs = stmt.executeQuery();
+        ResultSet rs = stmt.executeQuery();
 
-            while (rs.next()) {
+        while (rs.next()) {
 
-                Expense e = new Expense(
-                        rs.getDouble("amount"),
-                        rs.getString("category"),
-                        rs.getString("date"),
-                        rs.getString("mood"),
-                        rs.getString("description")
-                );
+            Expense e = new Expense(
+                    rs.getInt("id"),
+                    rs.getDouble("amount"),
+                    rs.getString("category"),
+                    rs.getString("date"),
+                    rs.getString("mood"),
+                    rs.getString("description")
+            );
 
-                list.add(e);
-            }
-
-        } catch (SQLException ex) {
-            ex.printStackTrace();
+            list.add(e);
         }
 
-        return list;
+    } catch (Exception e) {
+        e.printStackTrace();
     }
+
+    return list;
+}
 
     // ===============================
     // DELETE EXPENSE
     // ===============================
     public void deleteExpense(Expense e) {
 
-        String sql = """
-            DELETE FROM expenses
-            WHERE username = ?
-            AND amount = ?
-            AND category = ?
-            AND date = ?
-            AND description = ?
-        """;
+    String sql = "DELETE FROM expenses WHERE id=?";
 
-        try (Connection conn = DatabaseManager.connect();
-             PreparedStatement stmt = conn.prepareStatement(sql)) {
+    try(Connection conn = DatabaseManager.connect();
+        PreparedStatement stmt = conn.prepareStatement(sql)) {
 
-            stmt.setString(1, username);
-            stmt.setDouble(2, e.getAmount());
-            stmt.setString(3, e.getCategory());
-            stmt.setString(4, e.getDate());
-            stmt.setString(5, e.getDescription());
+        stmt.setInt(1,e.getId());
 
-            stmt.executeUpdate();
+        int rows = stmt.executeUpdate();
 
-        } catch (SQLException ex) {
-            ex.printStackTrace();
+        if(rows==0){
+            System.out.println("Delete failed");
         }
+
+    }catch(Exception ex){
+        ex.printStackTrace();
     }
+}
 
     // ===============================
     // INSIGHTS HELPERS
