@@ -99,6 +99,7 @@ public class AddExpenseView extends VBox
         budgetService.checkBudgetWarnings(
                 repo.getAllExpenses()
         );
+        System.out.println("Expense saved to DB");
 
 if (!warnings.isEmpty()) {
 
