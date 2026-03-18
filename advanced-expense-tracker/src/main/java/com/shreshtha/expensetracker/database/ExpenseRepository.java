@@ -50,7 +50,8 @@ public class ExpenseRepository {
     List<Expense> list = new ArrayList<>();
 
     String sql = """
-        SELECT * FROM expenses
+        SELECT id, category, amount, date, mood, description
+        FROM expenses
         WHERE username = ?
         ORDER BY id DESC
     """;
@@ -65,7 +66,7 @@ public class ExpenseRepository {
         while (rs.next()) {
 
             Expense e = new Expense(
-                    rs.getInt("id"),
+                    rs.getInt("id"),                 // IMPORTANT
                     rs.getDouble("amount"),
                     rs.getString("category"),
                     rs.getString("date"),
@@ -86,25 +87,26 @@ public class ExpenseRepository {
     // ===============================
     // DELETE EXPENSE
     // ===============================
-    public void deleteExpense(Expense e) {
+    public boolean deleteExpense(Expense e) {
+        String sql = "DELETE FROM expenses WHERE id=?";
 
-    String sql = "DELETE FROM expenses WHERE id=?";
+        try (Connection conn = DatabaseManager.connect();
+             PreparedStatement stmt = conn.prepareStatement(sql)) {
 
-    try(Connection conn = DatabaseManager.connect();
-        PreparedStatement stmt = conn.prepareStatement(sql)) {
+            stmt.setInt(1, e.getId());
+            int rows = stmt.executeUpdate();
 
-        stmt.setInt(1,e.getId());
+            if (rows == 0) {
+                System.out.println("Delete failed in DB");
+                return false;
+            }
+            return true; // Delete was successful!
 
-        int rows = stmt.executeUpdate();
-
-        if(rows==0){
-            System.out.println("Delete failed");
+        } catch (Exception ex) {
+            ex.printStackTrace();
+            return false;
         }
-
-    }catch(Exception ex){
-        ex.printStackTrace();
     }
-}
 
     // ===============================
     // INSIGHTS HELPERS
