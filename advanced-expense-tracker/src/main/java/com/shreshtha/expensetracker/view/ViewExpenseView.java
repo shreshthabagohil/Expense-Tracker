@@ -26,7 +26,8 @@ public class ViewExpenseView extends VBox {
         Label title = new Label("View Expenses");
         title.getStyleClass().add("page-title");
 
-        setupTable(); loadData();
+        setupTable(); 
+        loadData();
 
         Button refreshBtn = iconButton("Refresh", "/icons/refresh.png");
         refreshBtn.getStyleClass().add("primary-btn");
@@ -48,14 +49,12 @@ public class ViewExpenseView extends VBox {
     }
 
     private void loadData(){
-
-    ObservableList<Expense> data =
-            FXCollections.observableArrayList(
-                    repo.getAllExpenses()
-            );
-
-    table.setItems(data);
-}
+        ObservableList<Expense> data =
+                FXCollections.observableArrayList(
+                        repo.getAllExpenses()
+                );
+        table.setItems(data);
+    }
 
     private void setupTable() {
         TableColumn<Expense, Double> amount = new TableColumn<>("Amount");
@@ -86,28 +85,32 @@ public class ViewExpenseView extends VBox {
         table.setColumnResizePolicy(TableView.CONSTRAINED_RESIZE_POLICY);
     }
 
-    private void refreshTable() {
-        ObservableList<Expense> data =
-                FXCollections.observableArrayList(repo.getAllExpenses());
-        table.setItems(data);
-    }
-
     private void deleteSelected() {
         Expense selected = table.getSelectionModel().getSelectedItem();
         if (selected == null) return;
 
         Alert confirm = new Alert(Alert.AlertType.CONFIRMATION);
-confirm.setHeaderText("Delete expense?");
-confirm.setContentText("Are you sure?");
+        confirm.setTitle("Confirm Delete");
+        confirm.setHeaderText("Delete Expense?");
+        confirm.setContentText("Are you sure you want to delete this " + selected.getCategory() + " expense?");
 
-confirm.showAndWait().ifPresent(res -> {
+        // Added your stylesheet so the popup looks nice!
+        confirm.getDialogPane().getStylesheets().add(
+            getClass().getResource("/theme.css").toExternalForm()
+        );
 
-    if (res == ButtonType.OK) {
-
-        repo.deleteExpense(selected);
-        loadData();
-    }
-});
+        confirm.showAndWait().ifPresent(res -> {
+            if (res == ButtonType.OK) {
+                // 1. Delete from database
+                repo.deleteExpense(selected);
+                
+                // 2. Remove directly from table to force instant UI visual refresh
+                table.getItems().remove(selected);
+                
+                // 3. Clear selection to prevent disabled button glitches
+                table.getSelectionModel().clearSelection();
+            }
+        });
     }
 
     private Button iconButton(String text, String iconPath) {
