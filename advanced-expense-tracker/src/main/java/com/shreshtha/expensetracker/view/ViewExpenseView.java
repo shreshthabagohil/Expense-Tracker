@@ -85,7 +85,7 @@ public class ViewExpenseView extends VBox {
         table.setColumnResizePolicy(TableView.CONSTRAINED_RESIZE_POLICY);
     }
 
-    private void deleteSelected() {
+   private void deleteSelected() {
         Expense selected = table.getSelectionModel().getSelectedItem();
         if (selected == null) return;
 
@@ -94,21 +94,25 @@ public class ViewExpenseView extends VBox {
         confirm.setHeaderText("Delete Expense?");
         confirm.setContentText("Are you sure you want to delete this " + selected.getCategory() + " expense?");
 
-        // Added your stylesheet so the popup looks nice!
         confirm.getDialogPane().getStylesheets().add(
             getClass().getResource("/theme.css").toExternalForm()
         );
 
         confirm.showAndWait().ifPresent(res -> {
             if (res == ButtonType.OK) {
-                // 1. Delete from database
-                repo.deleteExpense(selected);
+                // 1. Ask the repository to delete it and store the result
+                boolean success = repo.deleteExpense(selected);
                 
-                // 2. Remove directly from table to force instant UI visual refresh
-                table.getItems().remove(selected);
-                
-                // 3. Clear selection to prevent disabled button glitches
-                table.getSelectionModel().clearSelection();
+                if (success) {
+                    // 2. Only remove from UI if DB delete was ACTUALLY successful
+                    table.getItems().remove(selected);
+                    table.getSelectionModel().clearSelection();
+                } else {
+                    // 3. If it fails, let the user know instead of hiding the error!
+                    Alert error = new Alert(Alert.AlertType.ERROR);
+                    error.setContentText("Failed to delete! Restart the app to clear the database lock.");
+                    error.showAndWait();
+                }
             }
         });
     }
