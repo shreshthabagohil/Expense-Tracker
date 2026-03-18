@@ -191,54 +191,46 @@ public class BudgetService {
         return rows;
     }
 
+   // =========================================
+    // CHECK BUDGET WARNINGS (Database Version)
     // =========================================
-// CHECK BUDGET WARNINGS (Database Version)
-// =========================================
-public List<String> checkBudgetWarnings(List<Expense> expenses) {
+    public List<String> checkBudgetWarnings(List<Expense> expenses) {
 
-    List<String> warnings = new ArrayList<>();
+        List<String> warnings = new ArrayList<>();
+        String currentMonth = java.time.YearMonth.now().toString();
+        Map<String, Double> spent = new HashMap<>();
 
-    String currentMonth = java.time.YearMonth.now().toString();
-
-    Map<String, Double> spent = new HashMap<>();
-
-    for (Expense e : expenses) {
-        spent.merge(e.getCategory(), e.getAmount(), Double::sum);
-    }
-
-    try {
-
-        String sql =
-            "SELECT category, amount FROM budgets WHERE username=? AND month=?";
-
-        PreparedStatement stmt = conn.prepareStatement(sql);
-
-        stmt.setString(1, username);
-        stmt.setString(2, currentMonth);
-
-        ResultSet rs = stmt.executeQuery();
-
-        while (rs.next()) {
-
-            String category = rs.getString("category");
-            double limit = rs.getDouble("amount");
-
-            double used = spent.getOrDefault(category, 0.0);
-
-            if (used >= limit) {
-                warnings.add("❌ Budget exceeded for " + category);
-            }
-
-            else if (used >= limit * 0.8) {
-                warnings.add("⚠ You are close to exceeding budget for " + category);
-            }
+        for (Expense e : expenses) {
+            spent.merge(e.getCategory(), e.getAmount(), Double::sum);
         }
 
-    } catch (Exception e) {
-        e.printStackTrace();
-    }
+        // FIX: Using try-with-resources to automatically close the connection and prevent DB locks!
+        try (Connection localConn = DatabaseManager.connect()) {
+            String sql = "SELECT category, amount FROM budgets WHERE username=? AND month=?";
+            
+            try (PreparedStatement stmt = localConn.prepareStatement(sql)) {
+                stmt.setString(1, username);
+                stmt.setString(2, currentMonth);
 
-    return warnings;
-}
+                try (ResultSet rs = stmt.executeQuery()) {
+                    while (rs.next()) {
+                        String category = rs.getString("category");
+                        double limit = rs.getDouble("amount");
+                        double used = spent.getOrDefault(category, 0.0);
+
+                        if (used >= limit) {
+                            warnings.add("❌ Budget exceeded for " + category);
+                        } else if (used >= limit * 0.8) {
+                            warnings.add("⚠ You are close to exceeding budget for " + category);
+                        }
+                    }
+                }
+            }
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+
+        return warnings;
+    }
 
 }
