@@ -18,7 +18,6 @@ public class ExpenseRepository {
     // ADD EXPENSE
     // ===============================
     public void addExpense(Expense e) {
-
         String sql = """
             INSERT INTO expenses
             (username, category, amount, date, mood, description)
@@ -46,43 +45,39 @@ public class ExpenseRepository {
     // GET ALL EXPENSES
     // ===============================
     public List<Expense> getAllExpenses() {
+        List<Expense> list = new ArrayList<>();
+        String sql = """
+            SELECT id, category, amount, date, mood, description
+            FROM expenses
+            WHERE username = ?
+            ORDER BY id DESC
+        """;
 
-    List<Expense> list = new ArrayList<>();
+        // Bulletproof try-with-resources to prevent locks
+        try (Connection conn = DatabaseManager.connect();
+             PreparedStatement stmt = conn.prepareStatement(sql)) {
 
-    String sql = """
-        SELECT id, category, amount, date, mood, description
-        FROM expenses
-        WHERE username = ?
-        ORDER BY id DESC
-    """;
+            stmt.setString(1, username);
 
-    try (Connection conn = DatabaseManager.connect();
-         PreparedStatement stmt = conn.prepareStatement(sql)) {
-
-        stmt.setString(1, username);
-
-        ResultSet rs = stmt.executeQuery();
-
-        while (rs.next()) {
-
-            Expense e = new Expense(
-                    rs.getInt("id"),                 // IMPORTANT
-                    rs.getDouble("amount"),
-                    rs.getString("category"),
-                    rs.getString("date"),
-                    rs.getString("mood"),
-                    rs.getString("description")
-            );
-
-            list.add(e);
+            try (ResultSet rs = stmt.executeQuery()) {
+                while (rs.next()) {
+                    Expense e = new Expense(
+                            rs.getInt("id"),
+                            rs.getDouble("amount"),
+                            rs.getString("category"),
+                            rs.getString("date"),
+                            rs.getString("mood"),
+                            rs.getString("description")
+                    );
+                    list.add(e);
+                }
+            }
+        } catch (Exception e) {
+            e.printStackTrace();
         }
 
-    } catch (Exception e) {
-        e.printStackTrace();
+        return list;
     }
-
-    return list;
-}
 
     // ===============================
     // DELETE EXPENSE
@@ -97,10 +92,12 @@ public class ExpenseRepository {
             int rows = stmt.executeUpdate();
 
             if (rows == 0) {
-                System.out.println("Delete failed in DB");
+                System.out.println("⚠️ Delete failed: No expense found with ID " + e.getId());
                 return false;
             }
-            return true; // Delete was successful!
+            
+            System.out.println("✅ Successfully deleted expense ID " + e.getId());
+            return true; 
 
         } catch (Exception ex) {
             ex.printStackTrace();
@@ -112,19 +109,15 @@ public class ExpenseRepository {
     // INSIGHTS HELPERS
     // ===============================
     public String getHighestCategory() {
-
         return getAllExpenses().stream()
-                .reduce((e1, e2) ->
-                        e1.getAmount() > e2.getAmount() ? e1 : e2)
+                .reduce((e1, e2) -> e1.getAmount() > e2.getAmount() ? e1 : e2)
                 .map(Expense::getCategory)
                 .orElse("N/A");
     }
 
     public String getHighestMood() {
-
         return getAllExpenses().stream()
-                .reduce((e1, e2) ->
-                        e1.getAmount() > e2.getAmount() ? e1 : e2)
+                .reduce((e1, e2) -> e1.getAmount() > e2.getAmount() ? e1 : e2)
                 .map(Expense::getMood)
                 .orElse("N/A");
     }
