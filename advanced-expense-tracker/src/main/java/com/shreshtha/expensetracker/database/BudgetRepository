@@ -11,154 +11,123 @@ import com.shreshtha.expensetracker.model.MonthKey;
 
 public class BudgetRepository {
 
-    private final Connection conn;
-
-    public BudgetRepository(Connection conn) {
-        this.conn = conn;
+    // 🛑 REMOVED: private final Connection conn;
+    // We now use DatabaseManager.connect() cleanly inside each method!
+    public BudgetRepository() {
     }
 
-    public void saveBudget(String username, String category, double amount) throws SQLException {
+    public void saveBudget(String username, String category, double amount) {
+        String month = MonthKey.current().toString();
+        String sql = """
+            INSERT INTO budgets(username, month, category, amount)
+            VALUES (?, ?, ?, ?)
+            ON CONFLICT(username, month, category)
+            DO UPDATE SET amount = excluded.amount
+        """;
 
-    String month = MonthKey.current().toString();
+        try (Connection conn = DatabaseManager.connect();
+             PreparedStatement ps = conn.prepareStatement(sql)) {
+            ps.setString(1, username);
+            ps.setString(2, month);
+            ps.setString(3, category);
+            ps.setDouble(4, amount);
+            ps.executeUpdate();
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
+    }
 
-    String sql = """
-        INSERT INTO budgets(username, month, category, amount)
-        VALUES (?, ?, ?, ?)
-        ON CONFLICT(username, month, category)
-        DO UPDATE SET amount = excluded.amount
-    """;
-
-    PreparedStatement ps = conn.prepareStatement(sql);
-    ps.setString(1, username);
-    ps.setString(2, month);
-    ps.setString(3, category);
-    ps.setDouble(4, amount);
-
-    ps.executeUpdate();
-}
-
-    public Map<String, Double> getBudgets(String username) throws SQLException {
-
+    public Map<String, Double> getBudgets(String username) {
         Map<String, Double> budgets = new HashMap<>();
-
         String sql = "SELECT month, amount FROM budgets WHERE username = ?";
 
-        PreparedStatement ps = conn.prepareStatement(sql);
-        ps.setString(1, username);
-
-        ResultSet rs = ps.executeQuery();
-
-        while (rs.next()) {
-            budgets.put(rs.getString("month"), rs.getDouble("amount"));
+        try (Connection conn = DatabaseManager.connect();
+             PreparedStatement ps = conn.prepareStatement(sql)) {
+            ps.setString(1, username);
+            try (ResultSet rs = ps.executeQuery()) {
+                while (rs.next()) {
+                    budgets.put(rs.getString("month"), rs.getDouble("amount"));
+                }
+            }
+        } catch (SQLException e) {
+            e.printStackTrace();
         }
-
         return budgets;
     }
 
     // =========================================
-// CHECK BUDGET WARNINGS (Database Version)
-// =========================================
-public List<String> checkBudgetWarnings(List<Expense> expenses,String username) {
+    // CHECK BUDGET WARNINGS (Database Version)
+    // =========================================
+    public List<String> checkBudgetWarnings(List<Expense> expenses, String username) {
+        List<String> warnings = new ArrayList<>();
+        String month = MonthKey.current().toString();
+        String sql = "SELECT category, amount FROM budgets WHERE username = ? AND month = ?";
 
-    List<String> warnings = new ArrayList<>();
+        try (Connection conn = DatabaseManager.connect();
+             PreparedStatement stmt = conn.prepareStatement(sql)) {
 
-    String month = MonthKey.current().toString();
+            stmt.setString(1, username);
+            stmt.setString(2, month);
 
-    try (Connection conn = DatabaseManager.connect()) {
+            try (ResultSet rs = stmt.executeQuery()) {
+                // Calculate spent per category
+                Map<String, Double> spent = new HashMap<>();
+                for (Expense e : expenses) {
+                    spent.merge(e.getCategory(), e.getAmount(), Double::sum);
+                }
 
-        String sql =
-                "SELECT category, amount FROM budgets WHERE username = ? AND month = ?";
+                while (rs.next()) {
+                    String category = rs.getString("category");
+                    double limit = rs.getDouble("amount");
+                    double used = spent.getOrDefault(category, 0.0);
 
-        PreparedStatement stmt =
-                conn.prepareStatement(sql);
-
-        stmt.setString(1, username);
-        stmt.setString(2, month);
-
-        ResultSet rs = stmt.executeQuery();
-
-        // Calculate spent per category
-        Map<String, Double> spent = new HashMap<>();
-
-        for (Expense e : expenses) {
-            spent.merge(
-                    e.getCategory(),
-                    e.getAmount(),
-                    Double::sum
-            );
-        }
-
-        while (rs.next()) {
-
-            String category = rs.getString("category");
-            double limit = rs.getDouble("amount");
-
-            double used = spent.getOrDefault(category, 0.0);
-
-            if (used >= limit) {
-                warnings.add("❌ Budget exceeded for " + category);
+                    if (used >= limit) {
+                        warnings.add("❌ Budget exceeded for " + category);
+                    } else if (used >= limit * 0.8) {
+                        warnings.add("⚠ You are close to exceeding budget for " + category);
+                    }
+                }
             }
-            else if (used >= limit * 0.8) {
-                warnings.add("⚠ You are close to exceeding budget for "
-                        + category);
-            }
+        } catch (SQLException e) {
+            e.printStackTrace();
         }
-
-    } catch (SQLException e) {
-        e.printStackTrace();
+        return warnings;
     }
 
-    return warnings;
-}
+    public void rolloverBudget(String username) {
+        String currentMonth = MonthKey.current().toString();
+        String previousMonth = java.time.YearMonth.now().minusMonths(1).toString();
 
-public void rolloverBudget(String username) {
+        try (Connection conn = DatabaseManager.connect()) {
 
-    String currentMonth = MonthKey.current().toString();
+            // check if current month already has budgets
+            String checkSql = "SELECT COUNT(*) FROM budgets WHERE username=? AND month=?";
+            try (PreparedStatement checkStmt = conn.prepareStatement(checkSql)) {
+                checkStmt.setString(1, username);
+                checkStmt.setString(2, currentMonth);
+                try (ResultSet rs = checkStmt.executeQuery()) {
+                    if (rs.next() && rs.getInt(1) > 0) {
+                        return; // already exists, do nothing
+                    }
+                }
+            }
 
-    String previousMonth =
-            java.time.YearMonth.now()
-                    .minusMonths(1)
-                    .toString();
-
-    try {
-
-        // check if current month already has budgets
-        String checkSql =
-                "SELECT COUNT(*) FROM budgets WHERE username=? AND month=?";
-
-        PreparedStatement checkStmt =
-                conn.prepareStatement(checkSql);
-
-        checkStmt.setString(1, username);
-        checkStmt.setString(2, currentMonth);
-
-        ResultSet rs = checkStmt.executeQuery();
-
-        if (rs.next() && rs.getInt(1) > 0) {
-            return; // already exists, do nothing
-        }
-
-        // copy budgets from previous month
-        String copySql =
-                """
+            // copy budgets from previous month
+            String copySql = """
                 INSERT INTO budgets(username, month, category, amount)
                 SELECT username, ?, category, amount
                 FROM budgets
                 WHERE username=? AND month=?
-                """;
+            """;
+            try (PreparedStatement copyStmt = conn.prepareStatement(copySql)) {
+                copyStmt.setString(1, currentMonth);
+                copyStmt.setString(2, username);
+                copyStmt.setString(3, previousMonth);
+                copyStmt.executeUpdate();
+            }
 
-        PreparedStatement copyStmt =
-                conn.prepareStatement(copySql);
-
-        copyStmt.setString(1, currentMonth);
-        copyStmt.setString(2, username);
-        copyStmt.setString(3, previousMonth);
-
-        copyStmt.executeUpdate();
-
-    } catch (SQLException e) {
-        e.printStackTrace();
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
     }
-}
-
 }
