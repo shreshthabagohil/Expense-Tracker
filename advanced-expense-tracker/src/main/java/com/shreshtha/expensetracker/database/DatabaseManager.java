@@ -38,6 +38,7 @@ public class DatabaseManager {
              category TEXT,
              amount REAL,
              edited INTEGER DEFAULT 0,
+             date_modified TEXT, -- ✅ ADDED NEW COLUMN HERE
              UNIQUE(username, month, category)
               );
             """);
