@@ -19,6 +19,7 @@ public class BudgetService {
 
     public void setUser(String username) {
         this.username = username;
+        // automatically create budgets for new month
         budgetRepo.rolloverBudget(username);
     }
 
@@ -29,6 +30,7 @@ public class BudgetService {
         String month = MonthKey.current().toString();
 
         try (Connection conn = DatabaseManager.connect()) {
+            // Check if already exists
             String checkSql = "SELECT amount FROM budgets WHERE username = ? AND month = ? AND category = ?";
             try (PreparedStatement checkStmt = conn.prepareStatement(checkSql)) {
                 checkStmt.setString(1, username);
@@ -76,7 +78,10 @@ public class BudgetService {
                     if (!rs.next()) {
                         throw new IllegalStateException("No budget for category.");
                     }
-                    if (rs.getInt("edited") == 1) {
+
+                    boolean alreadyEdited = rs.getInt("edited") == 1;
+
+                    if (alreadyEdited) {
                         throw new IllegalStateException("Budget can only be edited once per month.");
                     }
                 }
@@ -143,6 +148,7 @@ public class BudgetService {
                     }
                 }
             }
+
         } catch (SQLException e) {
             e.printStackTrace();
         }
