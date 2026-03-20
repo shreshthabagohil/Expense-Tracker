@@ -39,28 +39,22 @@ public class BudgetView extends BorderPane {
         // ============================
         // TITLE
         // ============================
-
         Label title = new Label("Monthly Budget Overview");
         title.setStyle("-fx-font-size: 18px; -fx-font-weight: bold;");
 
         // ============================
         // SET BUDGET SECTION
         // ============================
-
         categoryBox.getItems().addAll(
                 "Food", "Transport", "Shopping",
                 "Bills", "Entertainment"
         );
         categoryBox.setPromptText("Select Category");
-
         amountField.setPromptText("Enter Budget Amount");
 
         Button setBtn = new Button("Set Budget");
-
         setBtn.setOnAction(e -> {
-
             String category = categoryBox.getValue();
-
             if (category == null || amountField.getText().isEmpty()) {
                 showAlert("Please fill all fields");
                 return;
@@ -79,73 +73,41 @@ public class BudgetView extends BorderPane {
             }
         });
 
-        HBox setSection = new HBox(15,
-                categoryBox,
-                amountField,
-                setBtn
-        );
-
+        HBox setSection = new HBox(15, categoryBox, amountField, setBtn);
         setSection.setAlignment(Pos.CENTER_LEFT);
 
         // ============================
         // TABLE SECTION
         // ============================
-
         table.setColumnResizePolicy(TableView.CONSTRAINED_RESIZE_POLICY);
 
-        TableColumn<BudgetRow, String> categoryCol =
-                new TableColumn<>("Category");
-        categoryCol.setCellValueFactory(data ->
-                new SimpleStringProperty(data.getValue().getCategory())
-        );
+        TableColumn<BudgetRow, String> categoryCol = new TableColumn<>("Category");
+        categoryCol.setCellValueFactory(data -> new SimpleStringProperty(data.getValue().getCategory()));
 
-        TableColumn<BudgetRow, Number> originalCol =
-                new TableColumn<>("Original");
-        originalCol.setCellValueFactory(data ->
-                new SimpleDoubleProperty(data.getValue().getOriginalBudget())
-        );
+        TableColumn<BudgetRow, Number> originalCol = new TableColumn<>("Original");
+        originalCol.setCellValueFactory(data -> new SimpleDoubleProperty(data.getValue().getOriginalBudget()));
 
-        TableColumn<BudgetRow, Number> currentCol =
-                new TableColumn<>("Current");
-        currentCol.setCellValueFactory(data ->
-                new SimpleDoubleProperty(data.getValue().getCurrentBudget())
-        );
+        TableColumn<BudgetRow, Number> currentCol = new TableColumn<>("Current");
+        currentCol.setCellValueFactory(data -> new SimpleDoubleProperty(data.getValue().getCurrentBudget()));
 
-        TableColumn<BudgetRow, Number> spentCol =
-                new TableColumn<>("Spent");
-        spentCol.setCellValueFactory(data ->
-                new SimpleDoubleProperty(data.getValue().getSpent())
-        );
+        TableColumn<BudgetRow, Number> spentCol = new TableColumn<>("Spent");
+        spentCol.setCellValueFactory(data -> new SimpleDoubleProperty(data.getValue().getSpent()));
 
-        TableColumn<BudgetRow, Number> remainingCol =
-                new TableColumn<>("Remaining");
-        remainingCol.setCellValueFactory(data ->
-                new SimpleDoubleProperty(data.getValue().getRemaining())
-        );
+        TableColumn<BudgetRow, Number> remainingCol = new TableColumn<>("Remaining");
+        remainingCol.setCellValueFactory(data -> new SimpleDoubleProperty(data.getValue().getRemaining()));
 
         // Progress Column
-        TableColumn<BudgetRow, Double> progressCol =
-                new TableColumn<>("Usage");
-
-        progressCol.setCellValueFactory(data ->
-                new SimpleDoubleProperty(
-                        data.getValue().getProgress()
-                ).asObject()
-        );
-
+        TableColumn<BudgetRow, Double> progressCol = new TableColumn<>("Usage");
+        progressCol.setCellValueFactory(data -> new SimpleDoubleProperty(data.getValue().getProgress()).asObject());
         progressCol.setCellFactory(col -> new TableCell<>() {
-
             private final ProgressBar bar = new ProgressBar();
-
             @Override
             protected void updateItem(Double value, boolean empty) {
                 super.updateItem(value, empty);
-
                 if (empty || value == null) {
                     setGraphic(null);
                 } else {
                     bar.setProgress(value);
-
                     if (value >= 1.0) {
                         bar.setStyle("-fx-accent: #E57373;");
                     } else if (value >= 0.8) {
@@ -153,18 +115,19 @@ public class BudgetView extends BorderPane {
                     } else {
                         bar.setStyle("-fx-accent: #81C784;");
                     }
-
                     setGraphic(bar);
                 }
             }
         });
 
-        TableColumn<BudgetRow, String> statusCol =
-                new TableColumn<>("Status");
-        statusCol.setCellValueFactory(data ->
-                new SimpleStringProperty(data.getValue().getStatus())
-        );
+        TableColumn<BudgetRow, String> statusCol = new TableColumn<>("Status");
+        statusCol.setCellValueFactory(data -> new SimpleStringProperty(data.getValue().getStatus()));
 
+        // ✅ ADDED NEW DATE COLUMN
+        TableColumn<BudgetRow, String> dateCol = new TableColumn<>("Date Set/Edited");
+        dateCol.setCellValueFactory(data -> new SimpleStringProperty(data.getValue().getDateModified()));
+
+        // ✅ Added dateCol to the end of this list
         table.getColumns().addAll(
                 categoryCol,
                 originalCol,
@@ -172,20 +135,16 @@ public class BudgetView extends BorderPane {
                 spentCol,
                 remainingCol,
                 progressCol,
-                statusCol
+                statusCol,
+                dateCol 
         );
 
         // ============================
         // EDIT SECTION
         // ============================
-
         Button editBtn = new Button("Edit Selected");
-
         editBtn.setOnAction(e -> {
-
-            BudgetRow selected =
-                    table.getSelectionModel().getSelectedItem();
-
+            BudgetRow selected = table.getSelectionModel().getSelectedItem();
             if (selected == null) {
                 showAlert("Select a category first");
                 return;
@@ -196,24 +155,15 @@ public class BudgetView extends BorderPane {
                 return;
             }
 
-            TextInputDialog dialog =
-                    new TextInputDialog(
-                            String.valueOf(selected.getCurrentBudget())
-                    );
-
+            TextInputDialog dialog = new TextInputDialog(String.valueOf(selected.getCurrentBudget()));
             dialog.setTitle("Edit Budget");
-            dialog.setHeaderText(
-                    "Edit budget for " + selected.getCategory()
-            );
+            dialog.setHeaderText("Edit budget for " + selected.getCategory());
             dialog.setContentText("New limit:");
 
             dialog.showAndWait().ifPresent(value -> {
                 try {
                     double newLimit = Double.parseDouble(value);
-                    budgetService.updateBudget(
-                            selected.getCategory(),
-                            newLimit
-                    );
+                    budgetService.updateBudget(selected.getCategory(), newLimit);
                     refresh();
                 } catch (Exception ex) {
                     showAlert(ex.getMessage());
@@ -230,7 +180,6 @@ public class BudgetView extends BorderPane {
         // ============================
         // LAYOUT STRUCTURE
         // ============================
-
         topContainer.getChildren().addAll(title, setSection);
         setTop(topContainer);
         setCenter(table);
@@ -242,9 +191,7 @@ public class BudgetView extends BorderPane {
     // ============================
     // ANALYTICS PANEL
     // ============================
-
     private HBox createAnalyticsPanel(List<BudgetRow> rows) {
-
         double totalBudget = 0;
         double totalSpent = 0;
 
@@ -254,22 +201,12 @@ public class BudgetView extends BorderPane {
         }
 
         double remaining = totalBudget - totalSpent;
+        double usagePercent = totalBudget == 0 ? 0 : (totalSpent / totalBudget) * 100;
 
-        double usagePercent = totalBudget == 0
-                ? 0
-                : (totalSpent / totalBudget) * 100;
-
-        Label totalBudgetLbl =
-                new Label("Total Budget: ₹ " + totalBudget);
-
-        Label totalSpentLbl =
-                new Label("Total Spent: ₹ " + totalSpent);
-
-        Label remainingLbl =
-                new Label("Remaining: ₹ " + remaining);
-
-        Label percentLbl =
-                new Label(String.format("Usage: %.2f %%", usagePercent));
+        Label totalBudgetLbl = new Label("Total Budget: ₹ " + totalBudget);
+        Label totalSpentLbl = new Label("Total Spent: ₹ " + totalSpent);
+        Label remainingLbl = new Label("Remaining: ₹ " + remaining);
+        Label percentLbl = new Label(String.format("Usage: %.2f %%", usagePercent));
 
         if (usagePercent > 100) {
             percentLbl.setStyle("-fx-text-fill: red;");
@@ -279,13 +216,7 @@ public class BudgetView extends BorderPane {
             percentLbl.setStyle("-fx-text-fill: green;");
         }
 
-        HBox box = new HBox(30,
-                totalBudgetLbl,
-                totalSpentLbl,
-                remainingLbl,
-                percentLbl
-        );
-
+        HBox box = new HBox(30, totalBudgetLbl, totalSpentLbl, remainingLbl, percentLbl);
         box.setAlignment(Pos.CENTER);
         box.setPadding(new Insets(10));
 
@@ -293,13 +224,8 @@ public class BudgetView extends BorderPane {
     }
 
     private void refresh() {
-
-        List<BudgetRow> rows =
-                budgetService.getCurrentMonthBudgetRows(expenses);
-
-        table.setItems(
-                FXCollections.observableArrayList(rows)
-        );
+        List<BudgetRow> rows = budgetService.getCurrentMonthBudgetRows(expenses);
+        table.setItems(FXCollections.observableArrayList(rows));
 
         HBox analytics = createAnalyticsPanel(rows);
 
@@ -311,8 +237,7 @@ public class BudgetView extends BorderPane {
     }
 
     private void showAlert(String message) {
-        Alert alert =
-                new Alert(Alert.AlertType.INFORMATION);
+        Alert alert = new Alert(Alert.AlertType.INFORMATION);
         alert.setTitle("Budget");
         alert.setHeaderText(null);
         alert.setContentText(message);
