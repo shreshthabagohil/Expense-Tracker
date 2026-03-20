@@ -1,46 +1,42 @@
 package com.shreshtha.expensetracker.model;
 
-public class Expense 
-{
+public class Expense {
+
+    private int id;
     private double amount;
     private String category;
     private String date;
     private String mood;
-    private String descripton;
+    private String description;
 
-    public Expense(double amount, String category, String date,String mood,String description) {
-        this.amount = amount;
-        this.category = category;
-        this.date = date;
+    // used when reading from database
+    public Expense(int id,double amount,String category,String date,String mood,String description) {
+        this.id=id;
+        this.amount=amount;
+        this.category=category;
+        this.date=date;
         this.mood=mood;
-        this.descripton=description;
+        this.description=description;
     }
 
-    public double getAmount() {
-        return amount;
+    // used when creating new expense
+    public Expense(double amount,String category,String date,String mood,String description) {
+        this.amount=amount;
+        this.category=category;
+        this.date=date;
+        this.mood=mood;
+        this.description=description;
     }
 
-    public String getCategory() {
-        return category;
-    }
+    public int getId() { return id; }
 
-    public String getDate() {
-        return date;
-    }
+    public double getAmount() { return amount; }
 
-    public String getDescription()
-    {
-        return descripton;
-    }
+    public String getCategory() { return category; }
 
-   @Override
-    public String toString() {
-    return amount + " | " + category + " | " + date + " | " + mood+" | " + descripton;
-     }
+    public String getDate() { return date; }
 
+    public String getMood() { return mood; }
 
-    public String getMood() {
-        return mood;
-    }
-    
+    public String getDescription() { return description; }
 }
